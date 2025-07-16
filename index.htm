@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>HackerTube Assistant</title>
+  <link rel="shortcut icon" href="./PAGES/harshtech-logo.jpg" type="image/x-icon">
+  <style>
+    :root {
+      --bg: #0a0a0a;
+      --text: #00ff99;
+      --accent: #00ffaa;
+    }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: monospace;
+    }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0.5em 1em;
+      background: #000;
+      border-bottom: 2px solid var(--accent);
+      position: relative;
+    }
+    #assistantImg {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+    }
+    #voiceGif {
+      width: 40px;
+      height: 40px;
+      display: none;
+      position: absolute;
+      top: 10px;
+      right: 10px;
+    }
+    .btns {
+      display: flex;
+      gap: 0.5em;
+      flex-wrap: wrap;
+      margin: 1em;
+    }
+    .btns button {
+      background: #111;
+      color: var(--text);
+      border: 1px solid var(--accent);
+      padding: 0.5em 1em;
+      cursor: pointer;
+      transition: 0.2s;
+    }
+    .btns button:hover {
+      background: var(--accent);
+      color: #000;
+    }
+    .btn-reset {
+      background-color: crimson !important;
+      color: white !important;
+    }
+    #chatBox {
+      margin: 1em;
+      padding: 1em;
+      border: 1px solid var(--accent);
+      height: 300px;
+      overflow-y: auto;
+      background: #111;
+    }
+    #spinner {
+      display: none;
+      text-align: center;
+      font-size: 1.2em;
+      color: var(--accent);
+    }
+    footer {
+      text-align: center;
+      margin-top: 1em;
+    }
+    .modal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+    }
+    .modal-content {
+      background: #111;
+      padding: 2em;
+      border: 2px solid var(--accent);
+      border-radius: 10px;
+      text-align: center;
+    }
+    .modal-content input {
+      padding: 0.6em;
+      font-size: 1em;
+      width: 80%;
+      border: none;
+      background: #222;
+      color: var(--text);
+      margin-top: 1em;
+    }
+    .modal-content button {
+      margin-top: 1em;
+      padding: 0.5em 1em;
+      background: var(--accent);
+      color: #000;
+      border: none;
+      font-size: 1em;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Name Prompt Modal -->
+  <div class="modal" id="nameModal">
+    <div class="modal-content">
+      <h2>🧠 Enter Your Hacker Alias</h2>
+      <input type="text" id="userNameInput" placeholder="Your name..." />
+      <br />
+      <button onclick="startApp()">Start</button>
+    </div>
+  </div>
+
+  <!-- Main Page -->
+  <div id="mainPage" style="display:none;">
+    <header>
+      <img src="https://cdn-icons-png.flaticon.com/512/4712/4712109.png" id="assistantImg" alt="Assistant" />
+      <h1>Youtube Assistant For Programmers</h1>
+      <img src="https://i.gifer.com/ZZ5H.gif" id="voiceGif" alt="Voice Active" />
+    </header>
+
+    <div class="btns">
+      <button onclick="runCommand('HTML')">HTML</button>
+      <button onclick="runCommand('CSS')">CSS</button>
+      <button onclick="runCommand('JavaScript')">JavaScript</button>
+      <button onclick="runCommand('C')">C</button>
+      <button onclick="runCommand('C++')">C++</button>
+      <button onclick="runCommand('DSA')">DSA</button>
+      <button id="resetBtn" onclick="resetAssistant()">Reset</button>
+      <button onclick="startListening()">🎙️ Voice</button>
+      <button onclick="exportChat()">📤 Export Chat</button>
+    </div>
+
+    <div id="chatBox"></div>
+    <div id="spinner">🌀 Assistant processing...</div>
+
+    <footer>&copy; 2025 HarshTech | All Rights Reserved</footer>
+  </div>
+
+  <!-- Audio Elements -->
+  <audio id="helloAudio" src="denied.mp3" preload="auto"></audio>
+  <audio id="exportAudio" src="https://www.soundjay.com/buttons/sounds/button-3.mp3" preload="auto"></audio>
+
+  <!-- PDF Export Library -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+  <script>
+    let userName = "User";
+    const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+    recognition.continuous = false;
+    recognition.lang = 'en-US';
+
+    function speak(text) {
+      const utterance = new SpeechSynthesisUtterance(text);
+      speechSynthesis.speak(utterance);
+    }
+
+    function addToChat(sender, msg) {
+      const time = new Date().toLocaleTimeString();
+      const chat = document.getElementById("chatBox");
+      chat.innerHTML += `<div><strong>${sender}</strong> [${time}]: ${msg}</div>`;
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function showSpinner(show) {
+      document.getElementById("spinner").style.display = show ? 'block' : 'none';
+      document.getElementById("voiceGif").style.display = show ? 'block' : 'none';
+    }
+
+    function startApp() {
+      const input = document.getElementById("userNameInput").value.trim();
+      if (!input) return alert("Please enter your name.");
+      userName = input;
+      document.getElementById("nameModal").style.display = "none";
+      document.getElementById("mainPage").style.display = "block";
+      document.getElementById("helloAudio").play();
+      setTimeout(() => {
+        speak(`Welconw to HarshTech Orhanization by Harshad Teli${userName}`);
+        addToChat("System", `Hello ${userName}, ready to assist you.`);
+      }, 1000);
+    }
+
+    function runCommand(command) {
+      showSpinner(true);
+      addToChat(userName, `Searching for ${command} on YouTube`);
+      speak(`Opening ${command} content`);
+      setTimeout(() => {
+        showSpinner(false);
+        window.open(`https://www.youtube.com/results?search_query=${encodeURIComponent(command)}`, '_blank');
+      }, 1500);
+    }
+
+    function resetAssistant() {
+      addToChat("System", "Assistant has been reset.");
+      speak("Assistant reset");
+      const resetBtn = document.getElementById("resetBtn");
+      resetBtn.classList.add("btn-reset");
+      setTimeout(() => resetBtn.classList.remove("btn-reset"), 2000);
+    }
+
+    function exportChat() {
+      const chat = document.getElementById("chatBox");
+      const opt = {
+        margin: 0.5,
+        filename: 'chat-history.pdf',
+        html2canvas: { scale: 2 },
+        jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+      };
+      document.getElementById("exportAudio").play();
+      speak("Exporting chat history");
+      html2pdf().set(opt).from(chat).save();
+    }
+
+    function startListening() {
+      speak("Listening for command");
+      showSpinner(true);
+      recognition.start();
+    }
+
+    recognition.onresult = function(event) {
+      const command = event.results[0][0].transcript.toLowerCase();
+      addToChat(userName, `🎙️ ${command}`);
+      if (["html", "css", "javascript", "c", "c++", "dsa"].includes(command)) {
+        runCommand(command.toUpperCase());
+      } else if (command.includes("export chat")) {
+        exportChat();
+      } else if (command.includes("reset")) {
+        resetAssistant();
+      } else {
+        speak("Unknown command");
+        addToChat("System", `Unknown command: ${command}`);
+      }
+      showSpinner(false);
+    };
+  </script>
+  <script src="./PAGES/prevent.js"></script>
+</body>
+</html>
